@@ -99,10 +99,10 @@ class CurlFormatter
     {
         $this->command .= ' ';
 
-        if ($this->commandLineLength > 0 && $this->currentLineLength + strlen($part) > $this->commandLineLength) {
-            $this->currentLineLength = 0;
-            $this->command .= "\\\n  ";
-        }
+//        if ($this->commandLineLength > 0 && $this->currentLineLength + strlen($part) > $this->commandLineLength) {
+//            $this->currentLineLength = 0;
+//            $this->command .= "\\\n  ";
+//        }
 
         $this->command .= $part;
         $this->currentLineLength += strlen($part) + 2;
@@ -113,13 +113,16 @@ class CurlFormatter
      */
     protected function extractHttpMethodArgument(RequestInterface $request)
     {
-        if ('GET' !== $request->getMethod() ) {
-            if ('HEAD' === $request->getMethod()) {
-                $this->addOption('-head');
-            } else {
-                $this->addOption('X', $request->getMethod());
-            }
-        }
+
+        //$this->addOption('X', );
+//        return ;
+//        if ('GET' !== $request->getMethod() ) {
+//            if ('HEAD' === $request->getMethod()) {
+//                $this->addOption('-head');
+//            } else {
+//                $this->addOption('X', $request->getMethod());
+//            }
+//        }
     }
 
     /**
@@ -180,30 +183,28 @@ class CurlFormatter
             }
 
             if ('user-agent' === strtolower($name)) {
-                $this->addOption('A', escapeshellarg($header[0]));
+                $this->addOption('-A', escapeshellarg($header[0]));
                 continue;
             }
 
             foreach ((array)$header as $headerValue) {
-                $this->addOption('H', escapeshellarg("{$name}: {$headerValue}"));
+                $this->addOption('-H', escapeshellarg("{$name}: {$headerValue}"));
             }
         }
     }
 
     protected function addOptionsToCommand()
     {
-        ksort($this->options);
-
         if ($this->options) {
+            $res = [];
             foreach ($this->options as $name => $value) {
-                if (is_array($value)) {
-                    foreach ($value as $subValue) {
-                        $this->addCommandPart("-{$name} {$subValue}");
-                    }
-                } else {
-                    $this->addCommandPart("-{$name} {$value}");
-                }
+                $value = trim($value, "'");
+                $value = sprintf('"%s"', $value);
+                $res[] = "{$name} {$value}";
             }
+
+//            dd($res);
+            $this->addCommandPart(implode(" \\\n  ", $res));
         }
     }
 
@@ -212,11 +213,10 @@ class CurlFormatter
      */
     protected function extractArguments(RequestInterface $request)
     {
-        $this->extractHttpMethodArgument($request);
+        $this->extractUrlArgument($request);
+        $this->extractHeadersArgument($request);
         $this->extractBodyArgument($request);
 //        $this->extractCookiesArgument($request);
-        $this->extractHeadersArgument($request);
-        $this->extractUrlArgument($request);
     }
 
     /**
@@ -232,6 +232,8 @@ class CurlFormatter
             $url = $url->withScheme('http');
         }
 
-        $this->addCommandPart(escapeshellarg((string)$url));
+        $this->addOption(sprintf('-X "%s"', $request->getMethod()), escapeshellarg((string)$url));
+
+        //$this->addCommandPart(sprintf('"%s"', trim(, "'")));
     }
 }
