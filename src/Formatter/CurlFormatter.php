@@ -2,11 +2,19 @@
 
 namespace Namshi\Cuzzle\Formatter;
 
-use GuzzleHttp\Cookie\CookieJar;
-use GuzzleHttp\Cookie\SetCookie;
-use GuzzleHttp\Message\RequestInterface;
-use GuzzleHttp\Subscriber\Cookie;
-use GuzzleHttp\Url;
+//use GuzzleHttp\Cookie\CookieJar;
+use Guzzle\Http\Message\Request;
+use GuzzleHttp\Cookie as CookieJar;
+
+//use GuzzleHttp\Cookie\SetCookie;
+//use GuzzleHttp\Message\RequestInterface;
+use Psr\Http\Message\RequestInterface;
+
+//use GuzzleHttp\Subscriber\Cookie;
+
+
+//use GuzzleHttp\Url;
+use Psr\Http\Message\UriInterface as Url;
 
 /**
  * Class CurlFormatter it formats a Guzzle request to a cURL shell command
@@ -132,39 +140,39 @@ class CurlFormatter
     /**
      * @param RequestInterface $request
      */
-    protected function extractCookiesArgument(RequestInterface $request)
-    {
-        $listeners = $request->getEmitter()->listeners('before');
-
-        foreach ($listeners as $listener) {
-            if ($listener[0] instanceof Cookie) {
-                $values = [];
-                $scheme = $request->getScheme();
-                $host   = $request->getHost();
-                $path   = $request->getPath();
-
-                /** @var SetCookie $cookie */
-                foreach ($listener[0]->getCookieJar() as $cookie) {
-                    if ($cookie->matchesPath($path) && $cookie->matchesDomain($host) &&
-                        ! $cookie->isExpired() && ( ! $cookie->getSecure() || $scheme == 'https')) {
-
-                        $values[] = $cookie->getName() . '=' . CookieJar::getCookieValue($cookie->getValue());
-                    }
-                }
-
-                if ($values) {
-                    $this->addOption('b', escapeshellarg(implode('; ', $values)));
-                }
-            }
-        }
-    }
+//    protected function extractCookiesArgument(RequestInterface $request)
+//    {
+//        $listeners = $request->getEmitter()->listeners('before');
+//
+//        foreach ($listeners as $listener) {
+//            if ($listener[0] instanceof Cookie) {
+//                $values = [];
+//                $scheme = $request->getScheme();
+//                $host   = $request->getHost();
+//                $path   = $request->getPath();
+//
+//                /** @var SetCookie $cookie */
+//                foreach ($listener[0]->getCookieJar() as $cookie) {
+//                    if ($cookie->matchesPath($path) && $cookie->matchesDomain($host) &&
+//                        ! $cookie->isExpired() && ( ! $cookie->getSecure() || $scheme == 'https')) {
+//
+//                        $values[] = $cookie->getName() . '=' . CookieJar::getCookieValue($cookie->getValue());
+//                    }
+//                }
+//
+//                if ($values) {
+//                    $this->addOption('b', escapeshellarg(implode('; ', $values)));
+//                }
+//            }
+//        }
+//    }
 
     /**
      * @param RequestInterface $request
      */
     protected function extractHeadersArgument(RequestInterface $request)
     {
-        $url = Url::fromString($request->getUrl());
+        $url = $request->getUri();
 
         foreach ($request->getHeaders() as $name => $header) {
             if ('host' === strtolower($name) && $header[0] === $url->getHost()) {
@@ -206,7 +214,7 @@ class CurlFormatter
     {
         $this->extractHttpMethodArgument($request);
         $this->extractBodyArgument($request);
-        $this->extractCookiesArgument($request);
+//        $this->extractCookiesArgument($request);
         $this->extractHeadersArgument($request);
         $this->extractUrlArgument($request);
     }
@@ -217,11 +225,11 @@ class CurlFormatter
      */
     protected function extractUrlArgument(RequestInterface $request)
     {
-        $url = Url::fromString($request->getUrl());
-        $url->setFragment(null);
+        $url = $request->getUri();
+        $url = $url->withFragment(null);
 
         if (!$url->getScheme()) {
-            $url = Url::fromString('http://' . (string)$url);
+            $url = $url->withScheme('http');
         }
 
         $this->addCommandPart(escapeshellarg((string)$url));
